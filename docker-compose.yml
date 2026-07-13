@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: online-library-web
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      
+      # Database Configuration (using local 'db' container)
+      - PG_HOST=db
+      - PG_PORT=5432
+      - PG_USER=postgres
+      - PG_PASSWORD=postgres_local_secure_password
+      - PG_DB_NAME=online_library
+      - PG_SSL_MODE=disable
+      # Leave PG_CA_CERTIFICATE empty to disable SSL checks for local DB container
+      - PG_CA_CERTIFICATE=
+      - PG_CONNECTION_LIMIT=20
+
+      # Redis / Valkey Configuration (using local 'redis' container)
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_USER=default
+      - REDIS_PASSWORD=valkey_local_secure_password
+
+      # Security & Sessions
+      - JWT_SECRET=local-production-jwt-secret-key-32-chars-long
+      - NEXTAUTH_SECRET=local-production-nextauth-secret-key-32-chars-long
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: postgres:15-alpine
+    container_name: online-library-db
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres_local_secure_password
+      - POSTGRES_DB=online_library
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d online_library"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: valkey/valkey:7.2-alpine
+    container_name: online-library-redis
+    restart: always
+    command: valkey-server --requirepass valkey_local_secure_password
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:
