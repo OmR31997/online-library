@@ -158,7 +158,28 @@ docker run -d \
 
 ---
 
-## 5. Troubleshooting & Useful Commands
+## 5. Automated Deployment Script (`deploy.sh`)
+
+An automated bash script is included at the root of the project to simplify deployment. This script automates git updates, dependency installation, service starts, container building, and deployment on port `8000`.
+
+To run the automated script:
+
+1. **Make it executable**:
+   ```bash
+   chmod +x deploy.sh
+   ```
+
+2. **Run the script**:
+   ```bash
+   ./deploy.sh
+   ```
+
+> [!IMPORTANT]
+> The script will build the application image and check for the presence of a `.env` configuration file to mount database and Valkey/Redis secrets. Ensure your `.env` variables are correctly set up prior to execution.
+
+---
+
+## 6. Troubleshooting & Useful Commands
 
 ### Next.js Standalone Mode
 The Dockerfile utilizes Next.js `standalone` mode (`output: "standalone"` in `next.config.ts`). In this mode, Next.js does not require `node_modules` at runtime. Instead, it generates a minimal server launcher at `.next/standalone/server.js` containing only required dependencies.
@@ -171,18 +192,18 @@ If the web container cannot connect to the database container:
 
 ---
 
-## 6. Nginx Reverse Proxy Setup
+## 7. Nginx Reverse Proxy Setup
 
 To expose the application on standard web ports (`80` / `443`), install and configure Nginx as a reverse proxy.
 
-### Step 6.1: Install Nginx
+### Step 7.1: Install Nginx
 On Ubuntu / Debian-based systems:
 ```bash
 sudo apt-get update
 sudo apt install nginx -y
 ```
 
-### Step 6.2: Configure Reverse Proxy
+### Step 7.2: Configure Reverse Proxy
 Create or edit your site configuration (e.g., `/etc/nginx/sites-available/online-library`):
 ```nginx
 server {
@@ -190,7 +211,7 @@ server {
     server_name your-domain.com; # Replace with your actual domain or IP
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
