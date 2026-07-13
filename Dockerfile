@@ -4,7 +4,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Install dependencies based on package-lock.json
-COPY package.json package-lock.json ./
+COPY package.json ./
 RUN npm ci --legacy-peer-deps
 
 # Stage 2: Rebuild the source code
