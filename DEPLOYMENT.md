@@ -1,6 +1,33 @@
 # Deployment & Operations Guide
 
-This guide provides step-by-step instructions for deploying and running the **online-library** application using Docker and Docker Compose, as well as executing database migrations and seeding operations.
+This is an interactive software engineering learning roadmap, tutorial, and quiz platform built using Next.js, Prisma (PostgreSQL), and Valkey/Redis.
+
+## Requirements
+- **Node.js**: `20.x` or later (for local host development)
+- **Docker**: `20.10.x` or later
+- **Docker Compose**: `v2.x` or later
+
+## Installation & Getting Started
+
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd online-library
+   ```
+
+2. **Configure environment settings**:
+   Copy the example file to `.env` and fill in the values:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Install local host dependencies** (Optional, for local node running):
+   ```bash
+   npm install
+   ```
+
+4. **Build and start containerized application**:
+   Refer to the Docker and Docker Compose instructions below.
 
 ---
 
@@ -141,3 +168,51 @@ If the web container cannot connect to the database container:
 1. Ensure the PostgreSQL container is fully initialized and healthy (`docker compose ps`).
 2. Verify that `PG_SSL_MODE` is set to `disable` for local container networking, as the local Postgres container is not configured with SSL certificates by default.
 3. Verify the credentials match in both `docker-compose.yml` (for `db`) and environment parameters (for `web`).
+
+---
+
+## 6. Nginx Reverse Proxy Setup
+
+To expose the application on standard web ports (`80` / `443`), install and configure Nginx as a reverse proxy.
+
+### Step 6.1: Install Nginx
+On Ubuntu / Debian-based systems:
+```bash
+sudo apt-get update
+sudo apt install nginx -y
+```
+
+### Step 6.2: Configure Reverse Proxy
+Create or edit your site configuration (e.g., `/etc/nginx/sites-available/online-library`):
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com; # Replace with your actual domain or IP
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        
+        # Real IP forwarding
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Enable the configuration and restart Nginx:
+```bash
+# Link to sites-enabled
+sudo ln -s /etc/nginx/sites-available/online-library /etc/nginx/sites-enabled/
+
+# Test configuration
+sudo nginx -t
+
+# Restart Nginx service
+sudo systemctl restart nginx
+```
