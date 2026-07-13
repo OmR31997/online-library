@@ -3,6 +3,25 @@
 # Exit on error
 set -e
 
+setup_swap(){
+        # Check if swap space is already active
+        if [ $(free -m | awk '/^Swap:/{print $2}') -eq 0 ]; then
+                echo "======================================"
+                echo "Creating 2GB swap space to prevent Out-Of-Memory (137) errors..."
+                echo "======================================"
+                # Create a 2GB swap file (uses fallocate first, falls back to dd if not supported)
+                sudo fallocate -l 2G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=2048
+                sudo chmod 600 /swapfile
+                sudo mkswap /swapfile
+                sudo swapon /swapfile
+                # Make swap persistent across system reboots
+                echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+                echo "Swap space successfully enabled!"
+        else
+                echo "Swap space is already configured."
+        fi
+}
+
 code_clone(){
         echo "======================================"
         echo "Cloning or updating repository..."
@@ -111,6 +130,7 @@ deploy() {
 }
 
 # Run execution flow
+setup_swap
 code_clone
 depend_installation
 required_restarts
