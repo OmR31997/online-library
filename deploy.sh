@@ -4,64 +4,59 @@
 set -e
 
 code_clone(){
-        echo "======================================"
-        echo "Cloning online-library repository..."
-        echo "======================================"
-        # If the directory exists and is a valid Git repository, pull changes
-        if [ -d "online-library" ] && [ -d "online-library/.git" ]; then
-                echo "Directory online-library exists and is a Git repository. Pulling latest changes..."
+        echo "===================================="
+        echo "Cloning or updating repository..."
+        echo "===================================="
+        if [ -d "online-library" ]; then
+                echo "The code directory already exists. Pulling latest changes..."
                 cd online-library
                 git pull
                 cd ..
         else
-                echo "Directory does not exist or is not a valid Git repository. Re-cloning..."
-                rm -rf online-library
-                git clone git@github.com:OmR31997/online-library.git
+                git clone https://github.com/OmR31997/online-library.git
         fi
 }
 
-install_requirements(){
-        echo "======================================"
-        echo "Installing system dependencies (Docker & Nginx)..."
-        echo "======================================"
+depend_installation(){
+        echo "===================================="
+        echo "Package installing..."
+        echo "===================================="
         sudo apt-get update
         sudo apt-get install docker.io nginx -y
 }
 
 required_restarts(){
+        echo "===================================="
+        echo "Configuring permissions and services..."
         echo "======================================"
-        echo "Enabling and starting Docker and Nginx services..."
-        echo "======================================"
+        sudo chown $USER /var/run/docker.sock || true
         sudo systemctl enable docker
-        sudo systemctl start docker
         sudo systemctl enable nginx
-        sudo systemctl start nginx
+        sudo systemctl restart docker
+        sudo systemctl restart nginx
 }
 
-deploy(){
-        echo "======================================"
-        echo "Deploying online-library container..."
-        echo "======================================"
+deploy() {
+        echo "===================================="
+        echo "Deploying application container..."
+        echo "===================================="
         
-        # Navigate to repository directory if we cloned it
-        if [ -d "online-library" ]; then
-                cd online-library
-        fi
+        # Ensure we are inside the repository directory
+        cd online-library
 
         # Check if .env file exists
         if [ ! -f .env ]; then
-                echo "Error: .env file is missing!"
+                echo "Warning: .env file is missing. Creating from .env.example..."
                 if [ -f .env.example ]; then
                         cp .env.example .env
-                        echo "Created .env from .env.example."
-                        echo "Please edit the .env file in the repository to configure your database and redis credentials, then run the script again."
+                        echo "Created .env file. Please edit it with your database and redis connection details."
                 else
-                        echo "No .env.example found. Please create a .env file."
+                        echo "Error: No .env.example found. Please create a .env file."
+                        exit 1
                 fi
-                exit 1
         fi
 
-        # Build production docker image
+        # Build production docker image (context is '.' which is inside online-library/)
         docker build -t online-library:latest .
 
         # Stop and remove existing container if it already exists
@@ -70,8 +65,7 @@ deploy(){
                 docker rm -f online-library-app
         fi
 
-        # Run container using the environment file
-        # Container port is 3000, mapped to host port 8000
+        # Run container. Next.js runs on port 3000 internally, mapped to host port 8000
         docker run -d \
                 -p 8000:3000 \
                 --name online-library-app \
@@ -84,10 +78,8 @@ deploy(){
         echo "======================================"
 }
 
-# Run the deployment functions
-echo "***** DEPLOYMENT STARTED *****"
+# Run execution flow
 code_clone
-install_requirements
+depend_installation
 required_restarts
 deploy
-echo "***** DEPLOYMENT COMPLETED SUCCESSFULLY *****"
