@@ -1,0 +1,102 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id        String         @id @default(uuid())
+  name      String?
+  email     String         @unique
+  password  String
+  role      Role           @default(USER)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  progress  UserProgress[]
+
+  @@map("users")
+}
+
+model Roadmap {
+  id          String         @id @default(uuid())
+  title       String
+  slug        String         @unique
+  description String?
+  published   Boolean        @default(false)
+  nodes       Json           // JSON structure representing the steps/nodes
+  edges       Json           // JSON structure representing connections
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  tutorials   Tutorial[]
+  progress    UserProgress[]
+
+  @@map("roadmaps")
+}
+
+model Tutorial {
+  id          String         @id @default(uuid())
+  title       String
+  slug        String         @unique
+  description String?
+  content     String         @db.Text
+  published   Boolean        @default(false)
+  roadmapId   String?
+  roadmap     Roadmap?       @relation(fields: [roadmapId], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  progress    UserProgress[]
+
+  @@map("tutorials")
+}
+
+model Quiz {
+  id          String         @id @default(uuid())
+  title       String
+  description String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  questions   Question[]
+  progress    UserProgress[]
+
+  @@map("quizzes")
+}
+
+model Question {
+  id                 String   @id @default(uuid())
+  text               String
+  options            Json     // Array of strings
+  correctAnswerIndex Int
+  quizId             String
+  quiz               Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("questions")
+}
+
+model UserProgress {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roadmapId   String?
+  roadmap     Roadmap?  @relation(fields: [roadmapId], references: [id], onDelete: SetNull)
+  tutorialId  String?
+  tutorial    Tutorial? @relation(fields: [tutorialId], references: [id], onDelete: SetNull)
+  quizId      String?
+  quiz        Quiz?     @relation(fields: [quizId], references: [id], onDelete: SetNull)
+  quizScore   Int?
+  completed   Boolean   @default(false)
+  completedAt DateTime? @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, roadmapId, tutorialId, quizId])
+  @@map("user_progress")
+}
